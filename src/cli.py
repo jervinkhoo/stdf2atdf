@@ -1,0 +1,211 @@
+# src/cli.py
+from pathlib import Path
+import argparse
+import logging
+from typing import List
+
+from .core.utils.services import process_files
+
+from .core.utils.logging import setup_logging
+
+logger = logging.getLogger(__name__)
+
+
+# def calculate_optimal_workers(file_count: int) -> int:
+#     """
+#     Calculate optimal number of workers based on system resources and file count.
+#
+#     Args:
+#         file_count: Number of files to process
+#
+#     Returns:
+#         int: Optimal number of workers
+#     """
+#     # Get system info
+#     cpu_count = os.cpu_count() or 1
+#     available_memory = psutil.virtual_memory().available
+#
+#     # Reserve some CPUs for system operations (at least 1)
+#     reserved_cpus = max(1, cpu_count // 4)
+#     max_cpus = cpu_count - reserved_cpus
+#
+#     # Estimate memory per process (conservative estimate)
+#     estimated_memory_per_process = 500 * 1024 * 1024  # 500MB per process
+#     max_processes_by_memory = available_memory // (estimated_memory_per_process * 2)  # Factor of 2 for safety
+#
+#     # Calculate optimal workers
+#     optimal_workers = min(
+#         file_count,  # Don't create more workers than files
+#         max_cpus,  # Don't exceed available CPUs
+#         max_processes_by_memory,  # Don't exceed memory constraints
+#         8  # Hard upper limit for safety
+#     )
+#
+#     return max(1, optimal_workers)  # Ensure at least 1 worker
+#
+#
+# def process_single_file(input_file: Path,
+#                         output_file: Optional[Path] = None,
+#                         database_file: Optional[Path] = None,
+#                         records: Optional[List[str]] = None) -> None:
+#     """Process a single STDF file with corresponding output paths."""
+#     try:
+#         # Generate output paths if not specified
+#         if output_file is None and database_file is None:
+#             # Default behavior: create neither ATDF nor DB file
+#             run_conversion(str(input_file), None, None, records)
+#             return
+#
+#         # If output is requested but no path specified, use input name with .atdf
+#         if output_file is True:
+#             output_file = input_file.with_suffix('.atdf')
+#
+#         # If database is requested but no path specified, use input name with .db
+#         if database_file is True:
+#             database_file = input_file.with_suffix('.db')
+#
+#         run_conversion(
+#             str(input_file),
+#             str(output_file) if output_file else None,
+#             str(database_file) if database_file else None,
+#             records
+#         )
+#         logging.info(f"Successfully processed {input_file}")
+#
+#     except Exception as e:
+#         logging.error(f"Error processing {input_file}: {str(e)}")
+#         raise
+#
+#
+# def process_files(input_paths: List[Path],
+#                   output: bool = False,
+#                   database: bool = False,
+#                   records: Optional[List[str]] = None,
+#                   max_workers: Optional[int] = None) -> None:
+#     """
+#     Process multiple STDF files in parallel with smart worker allocation.
+#
+#     Args:
+#         input_paths: List of input file paths
+#         output: Whether to generate ATDF output files
+#         database: Whether to generate database files
+#         records: List of record types to process
+#         max_workers: Maximum number of parallel processes (optional)
+#     """
+#     file_count = len(input_paths)
+#
+#     # Calculate optimal number of workers if not specified
+#     if max_workers is None:
+#         max_workers = calculate_optimal_workers(file_count)
+#     else:
+#         # If specified, still cap it at our calculated optimal maximum
+#         optimal_max = calculate_optimal_workers(file_count)
+#         if max_workers > optimal_max:
+#             logging.warning(
+#                 f"Requested {max_workers} workers exceeds recommended maximum of {optimal_max}. "
+#                 f"Limiting to {optimal_max} workers."
+#             )
+#             max_workers = optimal_max
+#
+#     logging.info(f"Processing {file_count} files using {max_workers} workers")
+#
+#     with ProcessPoolExecutor(max_workers=max_workers) as executor:
+#         # Create a future for each input file
+#         future_to_path = {
+#             executor.submit(
+#                 process_single_file,
+#                 input_path,
+#                 output,
+#                 database,
+#                 records
+#             ): input_path
+#             for input_path in input_paths
+#         }
+#
+#         # Process results as they complete
+#         completed = 0
+#         for future in as_completed(future_to_path):
+#             input_path = future_to_path[future]
+#             try:
+#                 future.result()
+#                 completed += 1
+#                 if completed % max_workers == 0:  # Log progress in batches
+#                     logging.info(f"Processed {completed}/{file_count} files")
+#             except Exception as e:
+#                 logging.error(f"Failed to process {input_path}: {str(e)}")
+
+
+def find_stdf_files(path: Path) -> List[Path]:
+    """Find all STDF files in a directory and its subdirectories."""
+    if path.is_file():
+        return [path]
+
+    stdf_files = []
+    for pattern in ['*.stdf', '*.STDF']:
+        stdf_files.extend(path.rglob(pattern))
+    return sorted(stdf_files)  # Sort for predictable processing order
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='STDF to ATDF conversion tool')
+    parser.add_argument('input',
+                        help='Input STDF file or directory containing STDF files')
+    parser.add_argument('--output', '-o',
+                        action='store_true',
+                        help='Generate ATDF output files (using input filename with .atdf extension)')
+    parser.add_argument('--database', '-d',
+                        action='store_true',
+                        help='Generate SQLite database files (using input filename with .db extension)')
+    parser.add_argument('--records', '-r',
+                        nargs='*',
+                        help='Specific record types to process')
+    parser.add_argument('--workers', '-w',
+                        type=int,
+                        default=None,
+                        help='Number of parallel workers (defaults to optimal based on system resources)')
+    return parser.parse_args()
+
+
+def main():
+    # # Configure logging
+    # logging.basicConfig(
+    #     level=logging.INFO,
+    #     format='%(asctime)s - %(levelname)s - %(message)s',
+    #     handlers=[
+    #         logging.FileHandler('conversion.log'),
+    #         logging.StreamHandler()
+    #     ]
+    # )
+
+    args = parse_arguments()
+    input_path = Path(args.input)
+
+    try:
+        # Find all STDF files to process
+        input_files = find_stdf_files(input_path)
+
+        if not input_files:
+            logging.error(f"No STDF files found in {input_path}")
+            return
+
+        logger.info(f"Found {len(input_files)} STDF files to process")
+
+        # Process all files
+        process_files(
+            input_files,
+            output=args.output,
+            database=args.database,
+            records=args.records,
+            max_workers=args.workers
+        )
+
+        logger.info("Conversion completed successfully")
+
+    except Exception as e:
+        logger.error(f"Conversion failed: {str(e)}")
+        raise
+
+
+if __name__ == "__main__":
+    setup_logging()
+    main()
