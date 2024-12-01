@@ -15,6 +15,11 @@ __pycache__/
 *.log
 *.tmp
 
+# Ignore stdf, atdf, db files
+*.std*
+*.atd*
+*.db
+
 # Ignore node_modules
 node_modules/
 
@@ -27,3 +32,4 @@ dist/
 
 # Ignore JetBrains IDE settings
 .idea/
+
