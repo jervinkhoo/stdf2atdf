@@ -46,14 +46,22 @@ def process_files(input_paths: List[Path],
                   output: bool = False,
                   database: bool = False,
                   records: Optional[List[str]] = None,
-                  max_workers: Optional[int] = None) -> None:
+                  max_workers: Optional[int] = None,
+                  preprocessor_type: Optional[str] = None) -> None:
     """Process multiple STDF files in parallel with smart worker allocation."""
     workers = calculate_optimal_workers(len(input_paths), max_workers)
     logger.info(f"Processing {len(input_paths)} files using {workers} workers")
 
     with ProcessPoolExecutor(max_workers=workers) as executor:
         future_to_path = {
-            executor.submit(process_single_file, input_path, output, database, records): input_path
+            executor.submit(
+                process_single_file,
+                input_path,
+                output,
+                database,
+                records,
+                preprocessor_type
+            ): input_path
             for input_path in input_paths
         }
 
@@ -72,7 +80,8 @@ def process_files(input_paths: List[Path],
 def process_single_file(input_file: Path,
                         output_file: Optional[Path] = None,
                         database_file: Optional[Path] = None,
-                        records: Optional[List[str]] = None) -> None:
+                        records: Optional[List[str]] = None,
+                        preprocessor_type: Optional[str] = None) -> None:
     """Process a single STDF file with corresponding output paths."""
     try:
         if output_file is None and database_file is None:
@@ -89,7 +98,8 @@ def process_single_file(input_file: Path,
             str(input_file),
             str(output_file) if output_file else None,
             str(database_file) if database_file else None,
-            records
+            records,
+            preprocessor_type
         )
         logger.info(f"Successfully processed {input_file}")
 

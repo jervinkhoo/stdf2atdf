@@ -1,11 +1,11 @@
 # src/core/stdf/handler.py
-from .utils import *
+from .unpackers import *
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-def process_stdf_entry(stdf_template, data, endianness):
+def handle_stdf_entry(stdf_template, data, endianness):
     """Process STDF record data."""
     offset = 0
     stdf_processed_entry = {}
@@ -32,7 +32,7 @@ def process_stdf_entry(stdf_template, data, endianness):
 
     return stdf_processed_entry
 
-def process_stdf_entries(params):
+def handle_stdf_entries(params):
     """
     Process an STDF record.
 
@@ -44,5 +44,5 @@ def process_stdf_entries(params):
     endianness = params['endianness']
     stdf_processed_entries = params['stdf_processed_entries']
 
-    stdf_processed_entry = process_stdf_entry(stdf_template, data, endianness)
+    stdf_processed_entry = handle_stdf_entry(stdf_template, data, endianness)
     stdf_processed_entries[stdf_template['record_type']].append(stdf_processed_entry)

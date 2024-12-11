@@ -56,3 +56,14 @@ def reset_and_check_binary(file_handle) -> None:
 def is_file(path: str) -> bool:
     """Check if path is a valid file."""
     return Path(path).is_file()
+
+
+def find_stdf_files(path: Path) -> List[Path]:
+    """Find all STDF files in a directory and its subdirectories."""
+    if path.is_file():
+        return [path]
+
+    stdf_files = []
+    for pattern in ['*.stdf', '*.STDF']:
+        stdf_files.extend(path.rglob(pattern))
+    return sorted(stdf_files)  # Sort for predictable processing order
