@@ -41,8 +41,13 @@ def run_conversion(
         output_atdf_database: Optional[str] = None,
         records_to_process: Optional[list] = None,
         preprocessor_type: Optional[str] = None
-) -> None:
-    """Run STDF to ATDF conversion with optional database output."""
+) -> dict:
+    """
+    Run STDF to ATDF conversion with optional database output.
+
+    Returns:
+        A dictionary containing the processed ATDF entries, keyed by record type.
+    """
     validate_input_file(input_stdf_file)
 
     stdf_mapping = create_stdf_mapping()
@@ -102,9 +107,11 @@ def run_conversion(
             # else:
             #     create_database_from_atdf(output_atdf_database, atdf_processed_entries)
 
+        logger.info(f"Successfully processed {input_stdf_file}")
+        # Return the processed entries
+        return atdf_processed_entries
 
     except Exception as e:
         logger.exception(f"Fatal error during conversion: {e}")
+        # Re-raise the exception to signal failure clearly.
         raise
-
-    logger.info(f"Successfully processed {input_stdf_file}")

@@ -29,6 +29,7 @@ dist/
 
 # Ignore Python virtual environment directory
 .venv/
+venv/
 
 # Ignore JetBrains IDE settings
 .idea/

@@ -38,21 +38,23 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def main():
+def main() -> int: # Explicitly indicate return type is exit code
     args = parse_arguments()
     input_path = Path(args.input)
+    exit_code = 0 # Default success exit code
 
     try:
         input_files = find_stdf_files(input_path)
 
         if not input_files:
             logger.error(f"No STDF files found in {input_path}")
-            return
+            return 1 # Return non-zero exit code for error
 
         logger.info(f"Found {len(input_files)} STDF files to process")
 
-        # Process all files
-        process_files(
+        # Process all files and capture the result (list of dicts)
+        # The CLI itself doesn't use this list, but we capture it for consistency
+        processed_data_list = process_files(
             input_files,
             output=args.output,
             database=args.database,
@@ -65,9 +67,14 @@ def main():
 
     except Exception as e:
         logger.error(f"Conversion failed: {str(e)}")
-        raise
+        exit_code = 1 # Indicate failure
+        # Optionally re-raise if traceback is desired on CLI, but returning code is cleaner
+        # raise
+
+    return exit_code # Return explicit exit code
 
 
 if __name__ == "__main__":
     setup_logging()
-    main()
+    # Capture and exit with the code returned by main()
+    sys.exit(main())
